@@ -1,116 +1,67 @@
-// Source code is decompiled from a .class file using FernFlower decompiler.
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.FileReader;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.LinkOption;
-import java.nio.file.OpenOption;
-import java.nio.file.Paths;
-import java.nio.file.StandardOpenOption;
+import java.io.*;
+import java.nio.file.*;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.Scanner;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
 public class FileHandlingUtility {
-   private static final String LOG_FILE = "file_operations.log";
-   private static final Lock logLock = new ReentrantLock();
-   private static final SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-
-   public FileHandlingUtility() {
-   }
-
-   private static void logOperation(String var0) {
-      logLock.lock();
-
-      try {
-         FileWriter var1 = new FileWriter("file_operations.log", true);
-
-         try {
-            BufferedWriter var2 = new BufferedWriter(var1);
-
-            try {
-               String var10001 = dateFormat.format(new Date());
-               var2.write(var10001 + " - " + var0);
-               var2.newLine();
-            } catch (Throwable var14) {
-               try {
-                  var2.close();
-               } catch (Throwable var13) {
-                  var14.addSuppressed(var13);
-               }
-
-               throw var14;
+    
+    private static final String LOG_FILE = "file_operations.log";
+    private static final Lock logLock = new ReentrantLock();
+    private static final SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+    
+    private static void logOperation(String operation) {
+        logLock.lock();
+        try {
+            try (FileWriter fw = new FileWriter(LOG_FILE, true);
+                 BufferedWriter bw = new BufferedWriter(fw)) {
+                bw.write(dateFormat.format(new Date()) + " - " + operation);
+                bw.newLine();
+            } catch (IOException e) {
+                // Silent fail for logging
             }
-
-            var2.close();
-         } catch (Throwable var15) {
-            try {
-               var1.close();
-            } catch (Throwable var12) {
-               var15.addSuppressed(var12);
+        } finally {
+            logLock.unlock();
+        }
+    }
+    
+    public static String readFile(String filePath) throws IOException {
+        StringBuilder content = new StringBuilder();
+        try (BufferedReader reader = new BufferedReader(new FileReader(filePath))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                content.append(line).append(System.lineSeparator());
             }
-
-            throw var15;
-         }
-
-         var1.close();
-      } catch (IOException var16) {
-      } finally {
-         logLock.unlock();
-      }
-
-   }
-
-   public static String readFile(String var0) throws IOException {
-      StringBuilder var1 = new StringBuilder();
-      BufferedReader var2 = new BufferedReader(new FileReader(var0));
-
-      String var3;
-      try {
-         while((var3 = var2.readLine()) != null) {
-            var1.append(var3).append(System.lineSeparator());
-         }
-      } catch (Throwable var6) {
-         try {
-            var2.close();
-         } catch (Throwable var5) {
-            var6.addSuppressed(var5);
-         }
-
-         throw var6;
-      }
-
-      var2.close();
-      logOperation("Read file: " + var0);
-      return var1.toString();
-   }
-
-   public static void writeFile(String var0, String var1) throws IOException {
-      Files.write(Paths.get(var0), var1.getBytes(), new OpenOption[0]);
-      logOperation("Write to file: " + var0);
-   }
-
-   public static void appendToFile(String var0, String var1) throws IOException {
-      Files.write(Paths.get(var0), var1.getBytes(), new OpenOption[]{StandardOpenOption.APPEND});
-      logOperation("Append to file: " + var0);
-   }
-
-   public static void modifyFile(String var0, String var1, String var2) throws IOException {
-      String var3 = readFile(var0);
-      String var4 = var3.replace(var1, var2);
-      writeFile(var0, var4);
-      logOperation("Modified file: " + var0 + " (replaced '" + var1 + "' with '" + var2 + "')");
-   }
-
-   public static boolean fileExists(String var0) {
-      return Files.exists(Paths.get(var0), new LinkOption[0]);
-   }
-
-   public static void createDirectory(String var0) throws IOException {
-      Files.createDirectories(Paths.get(var0));
-      logOperation("Created directory: " + var0);
-   }
+        }
+        logOperation("Read file: " + filePath);
+        return content.toString();
+    }
+    
+    public static void writeFile(String filePath, String content) throws IOException {
+        Files.write(Paths.get(filePath), content.getBytes());
+        logOperation("Write to file: " + filePath);
+    }
+    
+    public static void appendToFile(String filePath, String content) throws IOException {
+        Files.write(Paths.get(filePath), content.getBytes(), StandardOpenOption.APPEND);
+        logOperation("Append to file: " + filePath);
+    }
+    
+    public static void modifyFile(String filePath, String oldText, String newText) throws IOException {
+        String content = readFile(filePath);
+        String modifiedContent = content.replace(oldText, newText);
+        writeFile(filePath, modifiedContent);
+        logOperation("Modified file: " + filePath + " (replaced '" + oldText + "' with '" + newText + "')");
+    }
+    
+    public static boolean fileExists(String filePath) {
+        return Files.exists(Paths.get(filePath));
+    }
+    
+    public static void createDirectory(String dirPath) throws IOException {
+        Files.createDirectories(Paths.get(dirPath));
+        logOperation("Created directory: " + dirPath);
+    }
 }
